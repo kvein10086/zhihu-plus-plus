@@ -133,6 +133,14 @@ Collect:
 - the dependency lines after edit
 - any blocking error if the new release is not yet visible
 
+### 8. Commit Changes
+
+Then you need to commit the new version. message: `build: bump markdown`. message body:
+```text
+Original version: (insert original version e.g. 1.x.x)
+Fork version: (insert fork version e.g. 0.0.1-alpha.N)
+```
+
 ## Failure handling
 
 ### Sonatype upload hangs without returning deployment ID
