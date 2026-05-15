@@ -208,7 +208,7 @@ fun RenderMarkdown(
     html: String,
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
-    selectable: Boolean = false,
+    selectable: Boolean = true,
     enableScroll: Boolean = true,
     header: (@Composable () -> Unit)? = null,
     footer: (@Composable () -> Unit)? = null,
@@ -227,31 +227,19 @@ fun RenderMarkdown(
         ),
         mathFontSize = 18f * fontSize / 100,
     )
-    val markdownBody: @Composable () -> Unit = {
-        Markdown(
-            document = document,
-            imageContent = ::RenderImage,
-            scrollState = scrollState,
-            enableScroll = enableScroll,
-            onLinkClick = { url ->
-                resolveContent(url)?.let { navigator.onNavigate(it) }
-                    ?: luoTianYiUrlLauncher(context, url.toUri())
-            },
-            header = header,
-            footer = footer,
-            theme = theme,
-        )
-    }
-
-    if (selectable) {
-        SelectionContainer(modifier = modifier) {
-            markdownBody()
-        }
-    } else {
-        Column(
-            modifier = modifier,
-        ) {
-            markdownBody()
-        }
-    }
+    Markdown(
+        document = document,
+        modifier = modifier,
+        imageContent = ::RenderImage,
+        scrollState = scrollState,
+        enableScroll = enableScroll,
+        enableSelection = selectable,
+        onLinkClick = { url ->
+            resolveContent(url)?.let { navigator.onNavigate(it) }
+                ?: luoTianYiUrlLauncher(context, url.toUri())
+        },
+        header = header,
+        footer = footer,
+        theme = theme,
+    )
 }
