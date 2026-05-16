@@ -21,6 +21,10 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+/**
+ * 内容打开事件。
+ * 这是内容详情层面的已打开记录，用于回答切换/已读判断，不是 feed 曝光记录。
+ */
 @Entity(
     tableName = ContentOpenEvent.TABLE_NAME,
     indices = [
