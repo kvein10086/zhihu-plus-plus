@@ -101,7 +101,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.currentBackStackEntryAsState
 import coil3.compose.AsyncImage
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.VoteUpState
@@ -195,8 +194,7 @@ fun ArticleScreen(
     val readingPlayerOverlayOffsetState = LocalReadingPlayerOverlayOffsetState.current
     val environment = rememberPaginationEnvironment(allowGuestAccess = false)
     val articleNavController = LocalArticleNavController.current
-    val backStackEntry by articleNavController?.currentBackStackEntryAsState()
-        ?: remember { mutableStateOf(null) }
+    val currentTopDestination = articleNavController?.backStack?.lastOrNull()
 
     val scrollState = rememberScrollState()
     val settings = rememberSettingsStore()
@@ -267,7 +265,7 @@ fun ArticleScreen(
         scrollState = scrollState,
         autoHide = autoHideArticleBottomBar,
         scrollDeltaThreshold = with(density) { ScrollThresholdDp.toPx() },
-        showSlot = backStackEntry?.hasRoute(Article::class) == true || articleNavController == null,
+        showSlot = currentTopDestination is Article || articleNavController == null,
         navigationBarHeightPx = density.run {
             WindowInsets.navigationBars
                 .asPaddingValues()
@@ -308,8 +306,7 @@ fun ArticleScreen(
             .takeIf { article.type == ArticleType.Answer && pageTurnSwitchAnswer },
     )
     val hapticFeedback = LocalHapticFeedback.current
-    val readingPlayerOverlayRouteId = articleNavController?.currentBackStackEntry?.id
-        ?: article.readingQueueSourceId
+    val readingPlayerOverlayRouteId = article.readingQueueSourceId
         ?: "${article.type}:${article.id}"
     DisposableEffect(readingPlayerOverlayOffsetState, readingPlayerOverlayRouteId, usesVerticalAnswerSwitch) {
         if (usesVerticalAnswerSwitch) {
@@ -455,7 +452,7 @@ fun ArticleScreen(
                                 IconButton(
                                     onClick = {
                                         if (articleNavController != null) {
-                                            articleNavController.popBackStack()
+                                            articleNavController.pop()
                                         } else {
                                             navigator.onNavigateBack()
                                         }

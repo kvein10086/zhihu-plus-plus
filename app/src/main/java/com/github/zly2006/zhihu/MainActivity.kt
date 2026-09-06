@@ -36,9 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
@@ -99,6 +96,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.nav.core.NavController
+import top.yukonga.miuix.kmp.nav.core.rememberNavController
 import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
@@ -109,7 +108,7 @@ class MainActivity : ComponentActivity() {
             .client
             .httpClient()
 
-    lateinit var navController: NavHostController
+    lateinit var navController: NavController<NavDestination>
     private lateinit var continuousUsageReminderManager: ContinuousUsageReminderManager
     private val pageTurnDispatcher = PageTurnDispatcher()
     private var currentMainTabOpenFrom: String? = null
@@ -205,7 +204,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            navController = rememberNavController()
+            navController = rememberNavController<NavDestination>(MainTabs)
             ZhihuTheme {
                 CompositionLocalProvider(LocalPageTurnDispatcher provides pageTurnDispatcher) {
                     Box(Modifier.semantics { testTagsAsResourceId = true }) {
@@ -406,11 +405,8 @@ class MainActivity : ComponentActivity() {
         preparePendingContentOpen(route)
         history.add(route)
         if (route is Video) {
-            val current = runCatching {
-                navController.currentBackStackEntry?.toRoute<Article>()
-            }.getOrNull() ?: runCatching {
-                navController.currentBackStackEntry?.toRoute<Question>()
-            }.getOrNull()
+            val top = navController.backStack.lastOrNull()
+            val current = top as? Article ?: top as? Question
             if (current == null) {
                 androidUserMessageSink(this).showShortMessage("无法打开视频：未知的内容类型")
                 return
@@ -447,20 +443,16 @@ class MainActivity : ComponentActivity() {
             navigateToMainTabs()
             return
         }
-        navController.navigate(route) {
-            if (popup) {
-                launchSingleTop = true
-                popUpTo(MainTabs) {
-                    // clear the back stack and viewModels
-                    saveState = true
-                }
-            }
+        if (popup) {
+            // deeplink/剪贴板跳转：清栈回到 MainTabs 根再 push（MainTabs 是 startDestination，pager 状态随根 entry 保留）。
+            navController.popUntil { it is MainTabs }
         }
+        navController.push(route)
     }
 
     private fun preparePendingContentOpen(target: NavDestination) {
         val openFrom = if (
-            runCatching { navController.currentBackStackEntry?.toRoute<MainTabs>() }.getOrNull() != null
+            navController.backStack.lastOrNull() is MainTabs
         ) {
             currentMainTabOpenFrom
         } else {
@@ -471,13 +463,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun navigateToMainTabs() {
-        navController.navigate(MainTabs) {
-            launchSingleTop = true
-            restoreState = true
-            popUpTo(MainTabs) {
-                saveState = true
-            }
-        }
+        // 清栈回到 MainTabs 根（pager 状态保存在根 entry 内，随之保留）。
+        navController.popUntil { it is MainTabs }
     }
 
     fun setCurrentMainTabOpenFrom(openFrom: String?) {
@@ -490,21 +477,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun currentContentOpenSource(): NavDestination? {
-        val currentEntry = navController.currentBackStackEntry
-        return runCatching {
-            currentEntry?.toRoute<Article>()
-        }.getOrNull() ?: runCatching {
-            currentEntry?.toRoute<Question>()
-        }.getOrNull() ?: runCatching {
-            currentEntry?.toRoute<Pin>()
-        }.getOrNull() ?: runCatching {
-            currentEntry?.toRoute<CollectionContent>()
-        }.getOrNull() ?: runCatching {
-            currentEntry?.toRoute<History>()
-        }.getOrNull() ?: runCatching {
-            currentEntry?.toRoute<Notification>()
-        }.getOrNull()
+    private fun currentContentOpenSource(): NavDestination? = when (val top = navController.backStack.lastOrNull()) {
+        is Article, is Question, is Pin, is CollectionContent, is History, is Notification -> top
+        else -> null
     }
 
     override fun onDestroy() {

@@ -16,6 +16,11 @@
 # debugging stack traces.
 -keepattributes SourceFile,LineNumberTable
 
+# WebviewComp.navigateInMainActivity 仍通过反射查找 MainActivity.navigate，防止 R8 重命名。
+-keepclassmembers class com.github.zly2006.zhihu.MainActivity {
+    public void navigate(...);
+}
+
 ##
 ## Kotlin Serialization
 ##
@@ -62,8 +67,8 @@
 }
 
 -keepnames class ** implements com.github.zly2006.zhihu.data.Feed$Target
-# Keep all enums
--keep enum ** {
+# Keep app's own enums (used via kotlinx.serialization / reflection)
+-keep enum com.github.zly2006.** {
     <fields>;
     public static **[] values();
     public static ** valueOf(java.lang.String);
